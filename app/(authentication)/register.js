@@ -1,4 +1,5 @@
 import {
+  Button,
   Image,
   KeyboardAvoidingView,
   Pressable,
@@ -6,6 +7,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
   View
 } from "react-native";
 import React, { useState } from "react";
@@ -13,7 +15,8 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { AntDesign } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { Entypo } from '@expo/vector-icons';
+import { Entypo } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 
 const Register = () => {
   const [name, setName] = useState("");
@@ -21,6 +24,25 @@ const Register = () => {
   const [password, setPassword] = useState("");
   const [avatar, setAvatar] = useState("");
   const router = useRouter();
+
+  const pickImage = async () => {
+    try {
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 1
+      });
+      console.log(result);
+
+      if (!result.cancelled) {
+        setAvatar({ uri: result.uri });
+      }
+    } catch (error) {
+      console.log("ImagePicker Error: ", error);
+    }
+  };
+
   return (
     <SafeAreaView
       style={{ flex: 1, backgroundColor: "white", alignItems: "center" }}>
@@ -104,7 +126,7 @@ const Register = () => {
               />
             </View>
           </View>
-          <View style={{ marginTop: 0 }}>
+          <View style={{ marginTop: 0, marginBottom: 20 }}>
             <View
               style={{
                 flexDirection: "row",
@@ -135,37 +157,10 @@ const Register = () => {
               />
             </View>
           </View>
-          <View style={{ marginTop: 0 }}>
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 5,
-                backgroundColor: "#E0E0E0",
-                paddingVertical: 5,
-                borderRadius: 5,
-                marginTop: 30
-              }}>
-              <Entypo
-                style={{ marginLeft: 8 }}
-                name="image"
-                size={24}
-                color="gray"
-              />
-              <TextInput
-                secureTextEntry={true}
-                style={{
-                  color: "gray",
-                  marginVertical: 10,
-                  width: 300,
-                  fontSize: avatar ? 18 : 18
-                }}
-                placeholder="Enter your image url"
-                value={avatar}
-                onChangeText={(text) => setAvatar(text)}
-              />
-            </View>
-          </View>
+          <TouchableOpacity style={styles.imageContainer} onPress={pickImage}>
+            <Text style={styles.buttonText}>Pick an Image</Text>
+            {/* {avatar && <Image source={avatar} style={styles.image} />} */}
+          </TouchableOpacity>
           <View
             style={{
               display: "flex",
@@ -216,4 +211,23 @@ const Register = () => {
 
 export default Register;
 
-const styles = StyleSheet.create({});
+const styles = StyleSheet.create({
+  imageContainer: {
+    height: 50,
+    borderColor: "gray",
+    borderWidth: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 5,
+  },
+  buttonText: {
+    fontSize: 18,
+    color: "blue"
+    // marginBottom: 10
+  },
+  image: {
+    width: 200,
+    height: 200,
+    marginTop: 10
+  }
+});

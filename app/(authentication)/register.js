@@ -1,4 +1,5 @@
 import {
+  Alert,
   Button,
   Image,
   KeyboardAvoidingView,
@@ -17,6 +18,8 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Entypo } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import linkedin from "../../assets/linkedin.png";
+import axios from "axios";
 
 const Register = () => {
   const [name, setName] = useState("");
@@ -33,13 +36,45 @@ const Register = () => {
         aspect: [4, 3],
         quality: 1
       });
-      console.log(result);
 
       if (!result.cancelled) {
-        setAvatar({ uri: result.uri });
+        setAvatar(result.assets[0].uri);
+        console.log(result.assets[0].uri); // Log the URI here
+      } else {
+        console.log("Image selection canceled");
       }
     } catch (error) {
       console.log("ImagePicker Error: ", error);
+    }
+  };
+
+  const handleRegister = async () => {
+    try {
+      const userDetails = {
+        name,
+        email,
+        password,
+        avatar
+      };
+      const response = await axios.post(
+        "http://192.168.0.10:8000/api/v1/users/register",
+        userDetails
+      );
+      console.log(response?.data);
+      Alert.alert(
+        "Registration Successful",
+        "You have been registered successfully"
+      );
+      setName("");
+      setEmail("");
+      setPassword("");
+      setAvatar("");
+    } catch (error) {
+      console.log("Error while registering the user: ", error);
+      Alert.alert(
+        "Registration Unsuccessful",
+        "An error occurred while registering"
+      );
     }
   };
 
@@ -49,9 +84,7 @@ const Register = () => {
       <View>
         <Image
           style={{ width: 150, height: 150, resizeMode: "contain" }}
-          source={{
-            url: "https://www.freepnglogos.com/uploads/linkedin-logo-transparent-png-25.png"
-          }}
+          source={linkedin}
         />
       </View>
       <KeyboardAvoidingView>
@@ -113,7 +146,6 @@ const Register = () => {
                 color="gray"
               />
               <TextInput
-                secureTextEntry={true}
                 style={{
                   color: "gray",
                   marginVertical: 10,
@@ -176,6 +208,7 @@ const Register = () => {
           </View>
           <View style={{ marginTop: 80 }}>
             <Pressable
+              onPress={handleRegister}
               style={{
                 width: 200,
                 backgroundColor: "#0072b1",
@@ -218,7 +251,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     justifyContent: "center",
     alignItems: "center",
-    borderRadius: 5,
+    borderRadius: 5
   },
   buttonText: {
     fontSize: 18,

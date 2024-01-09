@@ -1,4 +1,5 @@
 import {
+  Alert,
   Image,
   KeyboardAvoidingView,
   Pressable,
@@ -12,11 +13,43 @@ import React, { useState } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
 import { AntDesign } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import axios from "axios";
 
 const login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  const handleLogin = async () => {
+    try {
+      setLoading(true);
+      const userDetails = {
+        email: email,
+        password: password
+      };
+
+      const response = await axios.post(
+        "http://192.168.0.10:8000/api/v1/users/login",
+        userDetails
+      );
+
+      console.log(response?.data);
+      Alert.alert("Login Successful", "You have been logged in successfully");
+
+      setEmail("");
+      setPassword("");
+    } catch (error) {
+      console.log("Error while registering the user: ", error);
+      Alert.alert(
+        "Registration Unsuccessful",
+        "An error occurred while registering"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <SafeAreaView
       style={{ flex: 1, backgroundColor: "white", alignItems: "center" }}>
@@ -115,6 +148,7 @@ const login = () => {
           </View>
           <View style={{ marginTop: 80 }}>
             <Pressable
+              onPress={handleLogin}
               style={{
                 width: 200,
                 backgroundColor: "#0072b1",
@@ -130,7 +164,7 @@ const login = () => {
                   fontSize: 16,
                   fontWeight: "bold"
                 }}>
-                Login
+                {loading ? "Login in" : "Login"}
               </Text>
             </Pressable>
             <Pressable

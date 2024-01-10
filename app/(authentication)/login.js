@@ -9,17 +9,35 @@ import {
   TextInput,
   View
 } from "react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { MaterialIcons } from "@expo/vector-icons";
 import { AntDesign } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import linkedin from "../../assets/linkedin.png";
+
 
 const login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    const checkLoginStatus = async () => {
+      try {
+        const token = await AsyncStorage.getItem("authToken");
+        if (token) {
+          router.replace("/(tabs)/home");
+        }
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    checkLoginStatus();
+  }, []);
 
   const handleLogin = async () => {
     try {
@@ -35,10 +53,14 @@ const login = () => {
       );
 
       console.log(response?.data);
+      const token = response?.data?.data?.accessToken;
+      console.log("Token", token);
+      AsyncStorage.setItem("authToken", token);
       Alert.alert("Login Successful", "You have been logged in successfully");
 
       setEmail("");
       setPassword("");
+      router.replace("/(tabs)/home");
     } catch (error) {
       console.log("Error while registering the user: ", error);
       Alert.alert(
@@ -56,9 +78,7 @@ const login = () => {
       <View>
         <Image
           style={{ width: 150, height: 150, resizeMode: "contain" }}
-          source={{
-            url: "https://www.freepnglogos.com/uploads/linkedin-logo-transparent-png-25.png"
-          }}
+          source={linkedin}
         />
       </View>
       <KeyboardAvoidingView>
@@ -164,7 +184,7 @@ const login = () => {
                   fontSize: 16,
                   fontWeight: "bold"
                 }}>
-                {loading ? "Login in" : "Login"}
+                {loading ? "Login in..." : "Login"}
               </Text>
             </Pressable>
             <Pressable

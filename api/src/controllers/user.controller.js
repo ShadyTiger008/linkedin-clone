@@ -122,7 +122,7 @@ const verifyEmail = asyncHandler(async (req, res) => {
 
 //User Registration Controller
 const userRegistration = asyncHandler(async (req, res) => {
-  const { name, email, password, avatar, coverImage } = req.body;
+  const { name, email, password } = req.body;
 
   if ([name, email, password].some((field) => field?.trim() === "")) {
     throw new ApiError(400, "All fields are required!");
@@ -131,42 +131,34 @@ const userRegistration = asyncHandler(async (req, res) => {
   const existedUser = await userModel.User.findOne({
     $or: [{ name: name }, { email: email }],
   });
+
   if (existedUser) {
     throw new ApiError(409, "User with email or name already exists!");
   }
-  // const avatarLocalPath = req.files?.avatar[0]?.path;
 
-  // let coverImageLocalPath;
-  // if (
-  //   req.files &&
-  //   Array.isArray(req.files.coverImage) &&
-  //   req.files.coverImage.length > 0
-  // ) {
-  //   coverImageLocalPath = req.files.coverImage[0].path;
-  // }
-  // // const coverImageLocalPath = req.file.coverImage[ 0 ]?.path
+  let avatarLocalPath;
+  if (req.files?.avatar && req.files.avatar.length > 0) {
+    avatarLocalPath = req.files.avatar[0].path;
+  }
 
-  // if (!avatarLocalPath) {
-  //   throw new ApiError(400, "Avatar is required!");
-  // }
-  // // console.log("Uploading avatar to Cloudinary:", avatarLocalPath);
+  let coverImageLocalPath;
+  if (req.files && req.files.coverImage && req.files.coverImage.length > 0) {
+    coverImageLocalPath = req.files.coverImage[0].path;
+  }
 
-  // const avatar = await uploadOnCloudinary(avatarLocalPath);
-  // const coverImage = await uploadOnCloudinary(coverImageLocalPath);
-
-  // if (!avatar) {
-  //   // console.error("Avatar upload to Cloudinary failed:", avatar);
-  //   throw new ApiError(400, "Avatar file is required!");
-  // }
-
-  // console.log("Avatar uploaded successfully:", avatar);
+  const avatar = avatarLocalPath
+    ? await uploadOnCloudinary(avatarLocalPath)
+    : null;
+  const coverImage = coverImageLocalPath
+    ? await uploadOnCloudinary(coverImageLocalPath)
+    : null;
 
   const user = await userModel.User.create({
     name,
     email,
     password,
-    avatar: avatar.url || "",
-    coverImage: coverImage?.url || "",
+    avatar: avatar?.url || "", // Set empty string if avatar is not provided
+    coverImage: coverImage?.url || "", // Set empty string if coverImage is not provided
   });
 
   user.verificationToken = crypto.randomBytes(20).toString("hex");
@@ -185,7 +177,7 @@ const userRegistration = asyncHandler(async (req, res) => {
 
   return res
     .status(201)
-    .json(new ApiResponse(200, createdUser, "User registered Successfully"));
+    .json(new ApiResponse(200, createdUser, "User registered successfully"));
 });
 
 //User Login Controller
@@ -259,6 +251,174 @@ const userLogout = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, "User logged out successfully!"));
 });
 
+//Get Specific User Controller
+const getUserById = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  console.log(userId);
+
+  const user = await userModel.User.findById(userId).select(
+    "-password -refreshToken"
+  );
+
+  if (!user) {
+    throw new ApiError(404, "No user found!");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { user: user }, "User found successfully!"));
+});
+
+//Get Connected User
+const connectedUser = asyncHandler(async (req, res) => {
+  const loggedInUserId = req.user?._id;
+  // console.log(loggedInUserId);
+  // const loggedInUserId = req.params.userId;
+
+  //fetch the logged-in user's connections
+  const loggedInuser = await userModel.User.findById(loggedInUserId).populate(
+    "connections",
+    "_id"
+  );
+  if (!loggedInuser) {
+    return res.status(400).json({ message: "User not found" });
+  }
+
+  //get the ID's of the connected users
+  const connectedUserIds = loggedInuser.connections.map(
+    (connection) => connection._id
+  );
+
+  //find the users who are not connected to the logged-in user Id
+  const users = await userModel.User.find({
+    _id: { $ne: loggedInUserId, $nin: connectedUserIds },
+  });
+
+  res.status(200).json(users);
+});
+
+//Connect With User
+const sendConnection = asyncHandler(async (req, res) => {
+  const currentUserId = req.user?._id;
+  const { selectedUserId } = req.body;
+
+  await userModel.User.findByIdAndUpdate(
+    selectedUserId,
+    {
+      $push: { connectionRequests: currentUserId },
+    },
+    { new: true }
+  ).lean();
+
+  const updatedLoggedInUser = await userModel.User.findByIdAndUpdate(
+    currentUserId,
+    {
+      $push: { sentConnectionRequest: selectedUserId },
+    },
+    { new: true }
+  ).lean();
+
+  res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { user: updatedLoggedInUser },
+        "Successfully sent the user request!"
+      )
+    );
+});
+
+//Get Connection Request List
+const getConnectionRequest = asyncHandler(async (req, res) => {
+  const loggedInUserId = req.user?._id;
+
+  const user = await userModel.User.findById(loggedInUserId)
+    .populate("connectionRequests", "name email avatar")
+    .lean();
+
+  const connectionRequests = user.connectionRequests;
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { Requests: connectionRequests },
+        "Successfully got the user connections!"
+      )
+    );
+});
+
+//Accept Connection Request
+const acceptConnection = asyncHandler(async (req, res) => {
+  const recepientId = req.user?._id;
+  const { senderId } = req.body;
+
+  const sender = await userModel.User.findById(senderId);
+  const recepient = await userModel.User.findById(recepientId);
+
+  if (!sender || !recepient) {
+    throw new Error("Sender or recepient not found");
+  }
+
+  sender.connections.push(recepientId);
+  recepient.connections.push(senderId);
+
+  recepient.connectionRequests = recepient.connectionRequests.filter(
+    (request) => request.toString() !== senderId.toString()
+  );
+
+  sender.sentConnectionRequest = sender.sentConnectionRequest.filter(
+    (request) => request.toString() !== recepientId.toString()
+  );
+
+  await sender.save();
+  await recepient.save();
+
+  const updatedLoggedInUser = await userModel.User.findById(recepientId).select(
+    "-password -refreshToken"
+  );
+  const updatedSenderUser = await userModel.User.findById(senderId).select(
+    "-password -refreshToken"
+  );
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { LoggedUser: updatedLoggedInUser, Sender: updatedSenderUser },
+        "Friend request accepted"
+      )
+    );
+});
+
+//Get All Connections of a user
+const getConnections = asyncHandler(async (req, res) => {
+  const loggedInUserId = req.user?._id;
+
+  const loggedInUser = await userModel.User.findById(loggedInUserId)
+    .populate("connections", "name email avatar")
+    .exec();
+
+  if (!loggedInUser) {
+    return res.status(404).json(new ApiResponse(404, null, "User not found"));
+  }
+
+  const loggedInUserConnections = loggedInUser.connections;
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { loggedInUserConnections },
+        "User Connections retrieved successfully"
+      )
+    );
+});
+
 module.exports = {
   generateAccessAndRefreshToken,
   refreshAccessToken,
@@ -266,4 +426,10 @@ module.exports = {
   userLogin,
   userLogout,
   verifyEmail,
+  getUserById,
+  connectedUser,
+  sendConnection,
+  getConnectionRequest,
+  acceptConnection,
+  getConnections,
 };

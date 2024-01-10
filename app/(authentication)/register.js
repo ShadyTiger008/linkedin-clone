@@ -48,23 +48,43 @@ const Register = () => {
     }
   };
 
-  const handleRegister = async () => {
+  const handleRegister = async () =>
+  {
+      setLoading(true);
     try {
-      const userDetails = {
-        name,
-        email,
-        password,
-        avatar
-      };
+      const userDetails = new FormData();
+
+      userDetails.append("name", name);
+      userDetails.append("email", email);
+      userDetails.append("password", password);
+
+      if (avatar) {
+        const uriParts = avatar.split(".");
+        const fileType = uriParts[uriParts.length - 1];
+        userDetails.append("avatar", {
+          uri: avatar,
+          name: `avatar.${fileType}`,
+          type: `image/${fileType}`
+        });
+      }
+
       const response = await axios.post(
         "http://192.168.0.10:8000/api/v1/users/register",
-        userDetails
+        userDetails,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data"
+          }
+        }
       );
+
       console.log(response?.data);
       Alert.alert(
         "Registration Successful",
         "You have been registered successfully"
       );
+
+      // Reset form fields
       setName("");
       setEmail("");
       setPassword("");
@@ -75,6 +95,9 @@ const Register = () => {
         "Registration Unsuccessful",
         "An error occurred while registering"
       );
+    } finally
+    {
+      setLoading(false);
     }
   };
 
@@ -190,7 +213,13 @@ const Register = () => {
             </View>
           </View>
           <TouchableOpacity style={styles.imageContainer} onPress={pickImage}>
-            <Text style={styles.buttonText}>Pick an Image</Text>
+            {avatar ? (
+              <Text style={styles.buttonText}>
+                Successfully uploaded the image
+              </Text>
+            ) : (
+              <Text style={styles.buttonText}>Pick an Image</Text>
+            )}
             {/* {avatar && <Image source={avatar} style={styles.image} />} */}
           </TouchableOpacity>
           <View
@@ -224,7 +253,7 @@ const Register = () => {
                   fontSize: 16,
                   fontWeight: "bold"
                 }}>
-                Register
+                {loading ? "Registering..." : "Register"}
               </Text>
             </Pressable>
             <Pressable

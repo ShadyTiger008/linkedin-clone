@@ -15,6 +15,8 @@ import { AntDesign } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import linkedin from "../../assets/linkedin.png";
+
 
 const login = () => {
   const [email, setEmail] = useState("");
@@ -76,9 +78,7 @@ const login = () => {
       <View>
         <Image
           style={{ width: 150, height: 150, resizeMode: "contain" }}
-          source={{
-            url: "https://www.freepnglogos.com/uploads/linkedin-logo-transparent-png-25.png"
-          }}
+          source={linkedin}
         />
       </View>
       <KeyboardAvoidingView>
@@ -184,7 +184,7 @@ const login = () => {
                   fontSize: 16,
                   fontWeight: "bold"
                 }}>
-                {loading ? "Login in" : "Login"}
+                {loading ? "Login in..." : "Login"}
               </Text>
             </Pressable>
             <Pressable

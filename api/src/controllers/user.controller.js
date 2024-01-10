@@ -131,42 +131,34 @@ const userRegistration = asyncHandler(async (req, res) => {
   const existedUser = await userModel.User.findOne({
     $or: [{ name: name }, { email: email }],
   });
+
   if (existedUser) {
     throw new ApiError(409, "User with email or name already exists!");
   }
-  const avatarLocalPath = req.files?.avatar[0]?.path;
+
+  let avatarLocalPath;
+  if (req.files?.avatar && req.files.avatar.length > 0) {
+    avatarLocalPath = req.files.avatar[0].path;
+  }
 
   let coverImageLocalPath;
-  if (
-    req.files &&
-    Array.isArray(req.files.coverImage) &&
-    req.files.coverImage.length > 0
-  ) {
+  if (req.files && req.files.coverImage && req.files.coverImage.length > 0) {
     coverImageLocalPath = req.files.coverImage[0].path;
   }
-  // const coverImageLocalPath = req.file.coverImage[ 0 ]?.path
 
-  if (!avatarLocalPath) {
-    throw new ApiError(400, "Avatar is required!");
-  }
-  // console.log("Uploading avatar to Cloudinary:", avatarLocalPath);
-
-  const avatar = await uploadOnCloudinary(avatarLocalPath);
-  const coverImage = await uploadOnCloudinary(coverImageLocalPath);
-
-  if (!avatar) {
-    // console.error("Avatar upload to Cloudinary failed:", avatar);
-    throw new ApiError(400, "Avatar file is required!");
-  }
-
-  console.log("Avatar uploaded successfully:", avatar);
+  const avatar = avatarLocalPath
+    ? await uploadOnCloudinary(avatarLocalPath)
+    : null;
+  const coverImage = coverImageLocalPath
+    ? await uploadOnCloudinary(coverImageLocalPath)
+    : null;
 
   const user = await userModel.User.create({
     name,
     email,
     password,
-    avatar: avatar.url || "",
-    coverImage: coverImage?.url || "",
+    avatar: avatar?.url || "", // Set empty string if avatar is not provided
+    coverImage: coverImage?.url || "", // Set empty string if coverImage is not provided
   });
 
   user.verificationToken = crypto.randomBytes(20).toString("hex");
@@ -185,7 +177,7 @@ const userRegistration = asyncHandler(async (req, res) => {
 
   return res
     .status(201)
-    .json(new ApiResponse(200, createdUser, "User registered Successfully"));
+    .json(new ApiResponse(200, createdUser, "User registered successfully"));
 });
 
 //User Login Controller

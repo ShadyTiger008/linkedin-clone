@@ -17,7 +17,6 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import linkedin from "../../assets/linkedin.png";
 
-
 const login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -53,7 +52,7 @@ const login = () => {
       );
 
       console.log(response?.data);
-      const token = response?.data?.data?.accessToken;
+      const token = response?.data?.data?.refreshToken;
       console.log("Token", token);
       AsyncStorage.setItem("authToken", token);
       Alert.alert("Login Successful", "You have been logged in successfully");

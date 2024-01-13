@@ -25,6 +25,7 @@ const Register = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const [avatar, setAvatar] = useState("");
   const router = useRouter();
 
@@ -48,9 +49,8 @@ const Register = () => {
     }
   };
 
-  const handleRegister = async () =>
-  {
-      setLoading(true);
+  const handleRegister = async () => {
+    setLoading(true);
     try {
       const userDetails = new FormData();
 
@@ -95,8 +95,7 @@ const Register = () => {
         "Registration Unsuccessful",
         "An error occurred while registering"
       );
-    } finally
-    {
+    } finally {
       setLoading(false);
     }
   };

@@ -14,6 +14,8 @@ import axios from "axios";
 import { AntDesign } from "@expo/vector-icons";
 import { Entypo } from "@expo/vector-icons";
 import UserProfile from "../../../components/UserProfile";
+import ConnectionRequest from "../../../components/ConnectionRequest";
+import { useRouter } from "expo-router";
 
 global.atob = decode; // Polyfill atob
 
@@ -21,6 +23,9 @@ const index = () => {
   const [userId, setUserId] = useState("");
   const [user, setUser] = useState(null);
   const [otherUsers, setOtherUsers] = useState([]);
+  const [connectionRequests, setConnectionRequests] = useState([]);
+
+  const router = useRouter();
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -32,7 +37,7 @@ const index = () => {
           token,
           process.env.REFRESH_TOKEN_SECRET
         );
-        console.log(decodedAccessToken);
+        // console.log(decodedAccessToken);
         setUserId(decodedAccessToken._id);
       } catch (error) {
         console.error("Error decoding token:", error);
@@ -61,7 +66,7 @@ const index = () => {
     fetchUserProfile();
   }, [userId]);
 
-  console.log("Now the user is: ", user);
+  // console.log("Now the user is: ", user);
 
   useEffect(() => {
     try {
@@ -87,7 +92,7 @@ const index = () => {
         const userProfiles = await response.data;
         setOtherUsers(userProfiles);
 
-        console.log("Other Users", userProfiles);
+        // console.log("Other Users", userProfiles);
       };
 
       getOtherUsers();
@@ -96,9 +101,60 @@ const index = () => {
     }
   }, [userId]);
 
+  useEffect(() => {
+    if (userId) {
+      fetchUserRequests();
+    }
+  }, [userId]);
+
+  const fetchUserRequests = async () => {
+    try {
+      const token = await AsyncStorage.getItem("authToken");
+
+      if (!token) {
+        console.error("Authentication token is missing.");
+        return;
+      }
+
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      };
+      const response = await axios.get(
+        "http://192.168.0.10:8000/api/v1/users/connection-requests",
+        config
+      );
+
+      console.log(
+        "Fetch user requests function console: ",
+        response.data.data.Requests
+      );
+
+      if (response.status === 200) {
+        const connectionRequestsData = response.data.data.Requests?.map(
+          (friendRequest) => ({
+            _id: friendRequest?._id,
+            name: friendRequest?.name,
+            email: friendRequest?.email,
+            avatar: friendRequest?.avatar
+          })
+        );
+
+        setConnectionRequests(connectionRequestsData);
+      }
+      console.log("COnnectionRequests: ", connectionRequests);
+    } catch (error) {
+      console.error("Error fetching connection requests: ", error);
+    }
+  };
+
+  console.log("COnnectionRequests: ", connectionRequests);
+
   return (
     <ScrollView style={{ flex: 1, backgroundColor: "white" }}>
       <Pressable
+        onPress={() => router.push("/networks/connections")}
         style={{
           marginTop: 10,
           marginHorizontal: 10,
@@ -138,7 +194,17 @@ const index = () => {
         }}
       />
 
-      <View>{/* Show All of the request connections */}</View>
+      <View>
+        {connectionRequests?.map((requests, index) => (
+          <ConnectionRequest
+            requests={requests}
+            key={index}
+            connectionRequests={connectionRequests}
+            setConnectionRequests={setConnectionRequests}
+            userId={userId}
+          />
+        ))}
+      </View>
 
       <View style={{ marginHorizontal: 15 }}>
         <View
